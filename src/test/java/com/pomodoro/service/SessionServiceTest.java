@@ -1,18 +1,19 @@
 package com.pomodoro.service;
 
+import com.pomodoro.dto.SessionCreateDTO;
 import com.pomodoro.dto.SessionDetailDTO;
 import com.pomodoro.dto.SessionFilter;
 import com.pomodoro.dto.SessionSummaryDTO;
 import com.pomodoro.entity.Category;
 import com.pomodoro.entity.Period;
 import com.pomodoro.entity.Session;
+import com.pomodoro.exception.SessionNotFoundException;
 import com.pomodoro.repository.SessionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -71,24 +72,50 @@ class SessionServiceTest {
     class Save {
 
         @Test
-        @DisplayName("deve salvar e retornar a sessão com id gerado")
-        void shouldSaveAndReturnSession() {
-            when(sessionRepository.save(sessionMock)).thenReturn(sessionMock);
+        @DisplayName("deve salvar e retornar SessionDetailDTO com dados corretos")
+        void shouldSaveAndReturnDetailDTO() {
+            SessionCreateDTO createDTO = new SessionCreateDTO(
+                    LocalDate.of(2025, 7, 18),
+                    DayOfWeek.FRIDAY,
+                    LocalTime.of(14, 30),
+                    4, 4, 100, 10,
+                    true,
+                    Period.AFTERNOON,
+                    Category.TECHNOLOGY
+            );
 
-            Session result = sessionService.save(sessionMock);
+            when(sessionRepository.save(any(Session.class))).thenReturn(sessionMock);
+
+            SessionDetailDTO result = sessionService.save(createDTO);
 
             assertThat(result).isNotNull();
-            assertThat(result.getId()).isEqualTo("abc123");
-            assertThat(result.getCategory()).isEqualTo(Category.TECHNOLOGY);
-            verify(sessionRepository, times(1)).save(sessionMock);
+            assertThat(result.id()).isEqualTo("abc123");
+            assertThat(result.category()).isEqualTo(Category.TECHNOLOGY);
+            assertThat(result.period()).isEqualTo(Period.AFTERNOON);
+            assertThat(result.targetCycles()).isEqualTo(4);
+            assertThat(result.completedCycles()).isEqualTo(4);
+            assertThat(result.totalFocusMinutes()).isEqualTo(100);
+            assertThat(result.totalBreakMinutes()).isEqualTo(10);
+            assertThat(result.success()).isTrue();
+            verify(sessionRepository, times(1)).save(any(Session.class));
         }
 
         @Test
-        @DisplayName("deve repassar qualquer exceção lançada pelo repository")
+        @DisplayName("deve repassar qualquer excecao lancada pelo repository")
         void shouldPropagateRepositoryException() {
+            SessionCreateDTO createDTO = new SessionCreateDTO(
+                    LocalDate.of(2025, 7, 18),
+                    DayOfWeek.FRIDAY,
+                    LocalTime.of(14, 30),
+                    4, 4, 100, 10,
+                    true,
+                    Period.AFTERNOON,
+                    Category.TECHNOLOGY
+            );
+
             when(sessionRepository.save(any())).thenThrow(new RuntimeException("DB error"));
 
-            assertThatThrownBy(() -> sessionService.save(sessionMock))
+            assertThatThrownBy(() -> sessionService.save(createDTO))
                     .isInstanceOf(RuntimeException.class)
                     .hasMessage("DB error");
         }
@@ -123,12 +150,12 @@ class SessionServiceTest {
         }
 
         @Test
-        @DisplayName("deve lançar RuntimeException quando id não existir")
+        @DisplayName("deve lancar SessionNotFoundException quando id nao existir")
         void shouldThrowWhenNotFound() {
             when(sessionRepository.findById("naoexiste")).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> sessionService.findById("naoexiste"))
-                    .isInstanceOf(RuntimeException.class)
+                    .isInstanceOf(SessionNotFoundException.class)
                     .hasMessageContaining("Session not found");
         }
     }
@@ -154,7 +181,7 @@ class SessionServiceTest {
             assertThat(result.getTotalElements()).isEqualTo(1);
             assertThat(result.getContent()).hasSize(1);
 
-            SessionSummaryDTO dto = result.getContent().get(0);
+            SessionSummaryDTO dto = result.getContent().getFirst();
             assertThat(dto.id()).isEqualTo("abc123");
             assertThat(dto.date()).isEqualTo(LocalDate.of(2025, 7, 18));
             assertThat(dto.completedCycles()).isEqualTo(4);
@@ -214,7 +241,7 @@ class SessionServiceTest {
             Page<SessionSummaryDTO> result = sessionService.findAll(filter, pageable);
 
             assertThat(result.getContent()).hasSize(1);
-            assertThat(result.getContent().get(0).period()).isEqualTo(Period.AFTERNOON);
+            assertThat(result.getContent().getFirst().period()).isEqualTo(Period.AFTERNOON);
             verify(mongoTemplate, times(1)).find(any(Query.class), eq(Session.class));
         }
 
@@ -229,7 +256,7 @@ class SessionServiceTest {
 
             Page<SessionSummaryDTO> result = sessionService.findAll(filter, pageable);
 
-            assertThat(result.getContent().get(0).category()).isEqualTo(Category.TECHNOLOGY);
+            assertThat(result.getContent().getFirst().category()).isEqualTo(Category.TECHNOLOGY);
         }
 
         @Test
@@ -243,7 +270,7 @@ class SessionServiceTest {
 
             Page<SessionSummaryDTO> result = sessionService.findAll(filter, pageable);
 
-            assertThat(result.getContent().get(0).success()).isTrue();
+            assertThat(result.getContent().getFirst().success()).isTrue();
         }
 
         @Test
@@ -271,7 +298,7 @@ class SessionServiceTest {
 
             Page<SessionSummaryDTO> result = sessionService.findAll(filter, pageable);
 
-            assertThat(result.getContent().get(0).success()).isFalse();
+            assertThat(result.getContent().getFirst().success()).isFalse();
         }
 
         @Test

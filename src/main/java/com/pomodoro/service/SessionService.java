@@ -1,9 +1,11 @@
 package com.pomodoro.service;
 
+import com.pomodoro.dto.SessionCreateDTO;
 import com.pomodoro.dto.SessionDetailDTO;
 import com.pomodoro.dto.SessionFilter;
 import com.pomodoro.dto.SessionSummaryDTO;
 import com.pomodoro.entity.Session;
+import com.pomodoro.exception.SessionNotFoundException;
 import com.pomodoro.repository.SessionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
@@ -21,8 +23,10 @@ public class SessionService {
     private final SessionRepository sessionRepository;
     private final MongoTemplate mongoTemplate;
 
-    public Session save(Session session) {
-        return sessionRepository.save(session);
+    public SessionDetailDTO save(SessionCreateDTO dto) {
+        Session session = dto.toEntity();
+        Session saved = sessionRepository.save(session);
+        return SessionDetailDTO.fromEntity(saved);
     }
 
     public Page<SessionSummaryDTO> findAll(SessionFilter filter, Pageable pageable) {
@@ -43,7 +47,7 @@ public class SessionService {
 
     public SessionDetailDTO findById(String id) {
         Session session = sessionRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Session not found: " + id));
+                .orElseThrow(() -> new SessionNotFoundException(id));
         return SessionDetailDTO.fromEntity(session);
     }
 

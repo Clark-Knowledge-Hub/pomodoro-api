@@ -1,10 +1,11 @@
 package com.pomodoro.controller;
 
+import com.pomodoro.dto.SessionCreateDTO;
 import com.pomodoro.dto.SessionDetailDTO;
 import com.pomodoro.dto.SessionFilter;
 import com.pomodoro.dto.SessionSummaryDTO;
-import com.pomodoro.entity.Session;
 import com.pomodoro.service.SessionService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -22,8 +23,8 @@ public class SessionController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Session create(@RequestBody Session session) {
-        return sessionService.save(session);
+    public SessionDetailDTO create(@Valid @RequestBody SessionCreateDTO dto) {
+        return sessionService.save(dto);
     }
 
     @GetMapping

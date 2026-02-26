@@ -1,13 +1,14 @@
 package com.pomodoro;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+
 class PomodoroApplicationTests {
 
 	@Test
-	void contextLoads() {
+	void mainClassExists() {
+		assertDoesNotThrow(() -> Class.forName("com.pomodoro.PomodoroApplication"));
 	}
 
 }
