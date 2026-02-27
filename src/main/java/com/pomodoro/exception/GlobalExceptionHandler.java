@@ -118,6 +118,21 @@ public class GlobalExceptionHandler {
     }
 
     // -------------------------------------------------------------------------
+    // 400 — Illegal argument (ex: invalid period value)
+    // -------------------------------------------------------------------------
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiErrorResponse> handleIllegalArgument(IllegalArgumentException ex,
+                                                                   HttpServletRequest request) {
+        ApiErrorResponse body = ApiErrorResponse.of(
+                HttpStatus.BAD_REQUEST.value(),
+                "Bad Request",
+                ex.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.badRequest().body(body);
+    }
+
+    // -------------------------------------------------------------------------
     // 500 — Catch-all for unexpected errors
     // -------------------------------------------------------------------------
     @ExceptionHandler(Exception.class)

@@ -70,11 +70,8 @@ class SessionControllerTest {
 
         createDTO = new SessionCreateDTO(
                 LocalDate.of(2025, 7, 18),
-                DayOfWeek.FRIDAY,
                 LocalTime.of(14, 30),
                 4, 4, 100, 10,
-                true,
-                Period.AFTERNOON,
                 Category.TECHNOLOGY
         );
 
@@ -140,8 +137,8 @@ class SessionControllerTest {
         @DisplayName("deve retornar 400 quando date for null")
         void shouldReturn400WhenDateIsNull() throws Exception {
             SessionCreateDTO invalid = new SessionCreateDTO(
-                    null, DayOfWeek.FRIDAY, LocalTime.of(14, 30),
-                    4, 4, 100, 10, true, Period.AFTERNOON, Category.TECHNOLOGY
+                    null, LocalTime.of(14, 30),
+                    4, 4, 100, 10, Category.TECHNOLOGY
             );
 
             mockMvc.perform(post("/sessions")
@@ -155,27 +152,11 @@ class SessionControllerTest {
         }
 
         @Test
-        @DisplayName("deve retornar 400 quando period for null")
-        void shouldReturn400WhenPeriodIsNull() throws Exception {
-            SessionCreateDTO invalid = new SessionCreateDTO(
-                    LocalDate.of(2025, 7, 18), DayOfWeek.FRIDAY, LocalTime.of(14, 30),
-                    4, 4, 100, 10, true, null, Category.TECHNOLOGY
-            );
-
-            mockMvc.perform(post("/sessions")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(invalid)))
-                    .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.status").value(400))
-                    .andExpect(jsonPath("$.fieldErrors[0].field").value("period"));
-        }
-
-        @Test
         @DisplayName("deve retornar 400 quando category for null")
         void shouldReturn400WhenCategoryIsNull() throws Exception {
             SessionCreateDTO invalid = new SessionCreateDTO(
-                    LocalDate.of(2025, 7, 18), DayOfWeek.FRIDAY, LocalTime.of(14, 30),
-                    4, 4, 100, 10, true, Period.AFTERNOON, null
+                    LocalDate.of(2025, 7, 18), LocalTime.of(14, 30),
+                    4, 4, 100, 10, null
             );
 
             mockMvc.perform(post("/sessions")
@@ -189,8 +170,8 @@ class SessionControllerTest {
         @DisplayName("deve retornar 400 quando targetCycles for menor que 1")
         void shouldReturn400WhenTargetCyclesLessThan1() throws Exception {
             SessionCreateDTO invalid = new SessionCreateDTO(
-                    LocalDate.of(2025, 7, 18), DayOfWeek.FRIDAY, LocalTime.of(14, 30),
-                    0, 4, 100, 10, true, Period.AFTERNOON, Category.TECHNOLOGY
+                    LocalDate.of(2025, 7, 18), LocalTime.of(14, 30),
+                    0, 4, 100, 10, Category.TECHNOLOGY
             );
 
             mockMvc.perform(post("/sessions")
@@ -205,8 +186,8 @@ class SessionControllerTest {
         @DisplayName("deve retornar 400 quando totalFocusMinutes for negativo")
         void shouldReturn400WhenFocusMinutesNegative() throws Exception {
             SessionCreateDTO invalid = new SessionCreateDTO(
-                    LocalDate.of(2025, 7, 18), DayOfWeek.FRIDAY, LocalTime.of(14, 30),
-                    4, 4, -10, 10, true, Period.AFTERNOON, Category.TECHNOLOGY
+                    LocalDate.of(2025, 7, 18), LocalTime.of(14, 30),
+                    4, 4, -10, 10, Category.TECHNOLOGY
             );
 
             mockMvc.perform(post("/sessions")
@@ -220,8 +201,8 @@ class SessionControllerTest {
         @DisplayName("deve retornar 400 com multiplos erros de validacao")
         void shouldReturn400WithMultipleValidationErrors() throws Exception {
             SessionCreateDTO invalid = new SessionCreateDTO(
-                    null, null, null,
-                    0, -1, -5, -3, null, null, null
+                    null, null,
+                    0, -1, -5, -3, null
             );
 
             mockMvc.perform(post("/sessions")
@@ -240,15 +221,12 @@ class SessionControllerTest {
             String invalidJson = """
                     {
                         "date": "2025-07-18",
-                        "dayOfWeek": "FRIDAY",
                         "startTime": "14:30",
                         "targetCycles": 4,
                         "completedCycles": 4,
                         "totalFocusMinutes": 100,
                         "totalBreakMinutes": 10,
-                        "success": true,
-                        "period": "INVALIDO",
-                        "category": "TECHNOLOGY"
+                        "category": "INVALIDO"
                     }
                     """;
 

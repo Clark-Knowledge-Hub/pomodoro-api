@@ -60,11 +60,8 @@ class ApiKeySecurityTest {
 
         createDTO = new SessionCreateDTO(
                 LocalDate.of(2025, 7, 18),
-                DayOfWeek.FRIDAY,
                 LocalTime.of(14, 30),
                 4, 4, 100, 10,
-                true,
-                Period.AFTERNOON,
                 Category.TECHNOLOGY
         );
 
