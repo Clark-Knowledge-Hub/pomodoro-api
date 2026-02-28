@@ -333,16 +333,21 @@ Dados agrupados por período para gráfico de linha/barra principal.
 
 #### Query Parameters
 
-| Parâmetro | Tipo     | Default | Descrição                                              |
-|-----------|----------|---------|--------------------------------------------------------|
-| `period`  | `string` | `week`  | `week` (últimos 7 dias), `month` (mês atual), `year` (ano atual) |
+| Parâmetro   | Tipo     | Default | Descrição                                              |
+|-------------|----------|---------|--------------------------------------------------------|
+| `period`    | `string` | `week`  | `week` (últimos 7 dias), `month` (mês atual), `year` (ano atual), `all` (todos os tempos) |
+| `startDate` | `string` | —       | Data início customizada (`YYYY-MM-DD`). Sobrescreve `period` |
+| `endDate`   | `string` | —       | Data fim customizada (`YYYY-MM-DD`). Sobrescreve `period`   |
 
 - `week` e `month` → dados agrupados **por dia**
-- `year` → dados agrupados **por semana ISO**
+- `year` e `all` → dados agrupados **por semana ISO** (se > 60 dias) ou **por dia**
+- Se `startDate` e `endDate` forem informados, o `period` é ignorado
 
-#### Exemplo de Request
+#### Exemplos de Request
 ```
 GET /dashboard/overview?period=week
+GET /dashboard/overview?period=all
+GET /dashboard/overview?startDate=2025-07-01&endDate=2025-07-31
 ```
 
 #### Resposta — `200 OK`
@@ -380,13 +385,17 @@ Distribuição de minutos e sessões por categoria para gráfico de pizza/donut.
 
 #### Query Parameters
 
-| Parâmetro | Tipo     | Default  | Descrição                                              |
-|-----------|----------|----------|--------------------------------------------------------|
-| `period`  | `string` | `month`  | `week`, `month` ou `year`                              |
+| Parâmetro   | Tipo     | Default  | Descrição                                              |
+|-------------|----------|----------|--------------------------------------------------------|
+| `period`    | `string` | `month`  | `week`, `month`, `year` ou `all`                       |
+| `startDate` | `string` | —        | Data início customizada (`YYYY-MM-DD`). Sobrescreve `period` |
+| `endDate`   | `string` | —        | Data fim customizada (`YYYY-MM-DD`). Sobrescreve `period`   |
 
-#### Exemplo de Request
+#### Exemplos de Request
 ```
 GET /dashboard/by-category?period=month
+GET /dashboard/by-category?period=all
+GET /dashboard/by-category?startDate=2025-01-01&endDate=2025-12-31
 ```
 
 #### Resposta — `200 OK`
@@ -427,7 +436,7 @@ Atividade diária do ano inteiro, estilo GitHub contribution graph.
 
 | Parâmetro | Tipo      | Default | Descrição                   |
 |-----------|-----------|---------|-----------------------------|
-| `year`    | `integer` | `2026`  | Ano desejado (ex: `2025`)   |
+| `year`    | `integer` | ano atual | Ano desejado (ex: `2025`)   |
 
 #### Exemplo de Request
 ```
@@ -507,13 +516,17 @@ Métricas de progresso no período: dias ativos, médias e taxa de sucesso.
 
 #### Query Parameters
 
-| Parâmetro | Tipo     | Default | Descrição                   |
-|-----------|----------|---------|-----------------------------|
-| `period`  | `string` | `week`  | `week`, `month` ou `year`   |
+| Parâmetro   | Tipo     | Default | Descrição                                              |
+|-------------|----------|---------|--------------------------------------------------------|
+| `period`    | `string` | `week`  | `week`, `month`, `year` ou `all`                       |
+| `startDate` | `string` | —       | Data início customizada (`YYYY-MM-DD`). Sobrescreve `period` |
+| `endDate`   | `string` | —       | Data fim customizada (`YYYY-MM-DD`). Sobrescreve `period`   |
 
-#### Exemplo de Request
+#### Exemplos de Request
 ```
 GET /dashboard/goals?period=month
+GET /dashboard/goals?period=all
+GET /dashboard/goals?startDate=2025-07-01&endDate=2025-07-31
 ```
 
 #### Resposta — `200 OK`

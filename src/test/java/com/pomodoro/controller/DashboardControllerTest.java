@@ -85,7 +85,7 @@ class DashboardControllerTest {
         void shouldReturnWeeklyOverview() throws Exception {
             var entry = new OverviewEntryDTO("27/02", 50, 2, 100.0);
             var overview = new OverviewDTO("week", 150, 5, 80.0, List.of(entry));
-            when(dashboardService.getOverview("week")).thenReturn(overview);
+            when(dashboardService.getOverview(eq("week"), isNull(), isNull())).thenReturn(overview);
             mockMvc.perform(get("/dashboard/overview").param("period", "week"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.period").value("week"))
@@ -97,7 +97,7 @@ class DashboardControllerTest {
         @DisplayName("Should use default period (week)")
         void shouldUseDefaultPeriod() throws Exception {
             var overview = new OverviewDTO("week", 0, 0, 0.0, List.of());
-            when(dashboardService.getOverview("week")).thenReturn(overview);
+            when(dashboardService.getOverview(eq("week"), isNull(), isNull())).thenReturn(overview);
             mockMvc.perform(get("/dashboard/overview"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.period").value("week"));
@@ -105,8 +105,8 @@ class DashboardControllerTest {
         @Test
         @DisplayName("Should return 400 for invalid period")
         void shouldReturn400ForInvalidPeriod() throws Exception {
-            when(dashboardService.getOverview("invalid"))
-                    .thenThrow(new IllegalArgumentException("Invalid period: invalid. Use: week, month, year"));
+            when(dashboardService.getOverview(eq("invalid"), isNull(), isNull()))
+                    .thenThrow(new IllegalArgumentException("Invalid period: invalid. Use: week, month, year, all"));
             mockMvc.perform(get("/dashboard/overview").param("period", "invalid"))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.error").value("Bad Request"));
@@ -121,7 +121,7 @@ class DashboardControllerTest {
         void shouldReturnCategoryStats() throws Exception {
             var tech = new CategoryStatsDTO(Category.TECHNOLOGY, 200, 5, 80.0, 60.0);
             var math = new CategoryStatsDTO(Category.MATH, 100, 3, 66.67, 30.0);
-            when(dashboardService.getByCategory("month")).thenReturn(List.of(tech, math));
+            when(dashboardService.getByCategory(eq("month"), isNull(), isNull())).thenReturn(List.of(tech, math));
             mockMvc.perform(get("/dashboard/by-category").param("period", "month"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$[0].category").value("TECHNOLOGY"))
@@ -131,7 +131,7 @@ class DashboardControllerTest {
         @Test
         @DisplayName("Should return empty list when no sessions")
         void shouldReturnEmptyList() throws Exception {
-            when(dashboardService.getByCategory("month")).thenReturn(List.of());
+            when(dashboardService.getByCategory(eq("month"), isNull(), isNull())).thenReturn(List.of());
             mockMvc.perform(get("/dashboard/by-category").param("period", "month"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$").isArray())
@@ -208,7 +208,7 @@ class DashboardControllerTest {
         @DisplayName("Should return 200 with goals data")
         void shouldReturnGoals() throws Exception {
             var goals = new GoalsDTO("week", 180, 4, 2, 50.0, 25.71, 3, 7);
-            when(dashboardService.getGoals("week")).thenReturn(goals);
+            when(dashboardService.getGoals(eq("week"), isNull(), isNull())).thenReturn(goals);
             mockMvc.perform(get("/dashboard/goals").param("period", "week"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.period").value("week"))
@@ -221,8 +221,8 @@ class DashboardControllerTest {
         @Test
         @DisplayName("Should return 400 for invalid period")
         void shouldReturn400ForInvalidPeriod() throws Exception {
-            when(dashboardService.getGoals("invalid"))
-                    .thenThrow(new IllegalArgumentException("Invalid period: invalid. Use: week, month, year"));
+            when(dashboardService.getGoals(eq("invalid"), isNull(), isNull()))
+                    .thenThrow(new IllegalArgumentException("Invalid period: invalid. Use: week, month, year, all"));
             mockMvc.perform(get("/dashboard/goals").param("period", "invalid"))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.error").value("Bad Request"));

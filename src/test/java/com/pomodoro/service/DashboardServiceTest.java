@@ -107,7 +107,7 @@ class DashboardServiceTest {
         void shouldReturnWeeklyOverview() {
             when(mongoTemplate.find(any(Query.class), eq(Session.class))).thenReturn(sampleSessions());
 
-            OverviewDTO result = dashboardService.getOverview("week");
+            OverviewDTO result = dashboardService.getOverview("week", null, null);
 
             assertThat(result.period()).isEqualTo("week");
             assertThat(result.totalSessions()).isEqualTo(4);
@@ -121,7 +121,7 @@ class DashboardServiceTest {
         void shouldReturnMonthlyOverview() {
             when(mongoTemplate.find(any(Query.class), eq(Session.class))).thenReturn(sampleSessions());
 
-            OverviewDTO result = dashboardService.getOverview("month");
+            OverviewDTO result = dashboardService.getOverview("month", null, null);
 
             assertThat(result.period()).isEqualTo("month");
             assertThat(result.data()).isNotEmpty();
@@ -132,16 +132,42 @@ class DashboardServiceTest {
         void shouldReturnYearlyOverview() {
             when(mongoTemplate.find(any(Query.class), eq(Session.class))).thenReturn(sampleSessions());
 
-            OverviewDTO result = dashboardService.getOverview("year");
+            OverviewDTO result = dashboardService.getOverview("year", null, null);
 
             assertThat(result.period()).isEqualTo("year");
             assertThat(result.data()).isNotEmpty();
         }
 
         @Test
+        @DisplayName("Should return all-time overview")
+        void shouldReturnAllTimeOverview() {
+            when(mongoTemplate.findAll(Session.class)).thenReturn(sampleSessions());
+            when(mongoTemplate.find(any(Query.class), eq(Session.class))).thenReturn(sampleSessions());
+
+            OverviewDTO result = dashboardService.getOverview("all", null, null);
+
+            assertThat(result.period()).isEqualTo("all");
+            assertThat(result.totalSessions()).isEqualTo(4);
+            assertThat(result.totalFocusMinutes()).isEqualTo(180);
+        }
+
+        @Test
+        @DisplayName("Should return overview with custom date range")
+        void shouldReturnCustomDateRange() {
+            LocalDate start = LocalDate.of(2025, 7, 1);
+            LocalDate end = LocalDate.of(2025, 7, 31);
+            when(mongoTemplate.find(any(Query.class), eq(Session.class))).thenReturn(sampleSessions());
+
+            OverviewDTO result = dashboardService.getOverview("week", start, end);
+
+            assertThat(result.totalSessions()).isEqualTo(4);
+            assertThat(result.data()).hasSize(31); // 31 days in July
+        }
+
+        @Test
         @DisplayName("Should throw exception for invalid period")
         void shouldThrowForInvalidPeriod() {
-            assertThatThrownBy(() -> dashboardService.getOverview("invalid"))
+            assertThatThrownBy(() -> dashboardService.getOverview("invalid", null, null))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Invalid period");
         }
@@ -158,7 +184,7 @@ class DashboardServiceTest {
         void shouldReturnCategoryStats() {
             when(mongoTemplate.find(any(Query.class), eq(Session.class))).thenReturn(sampleSessions());
 
-            List<CategoryStatsDTO> result = dashboardService.getByCategory("month");
+            List<CategoryStatsDTO> result = dashboardService.getByCategory("month", null, null);
 
             assertThat(result).isNotEmpty();
             assertThat(result).hasSizeLessThanOrEqualTo(Category.values().length);
@@ -179,7 +205,7 @@ class DashboardServiceTest {
         void shouldReturnEmptyWhenNoSessions() {
             when(mongoTemplate.find(any(Query.class), eq(Session.class))).thenReturn(List.of());
 
-            List<CategoryStatsDTO> result = dashboardService.getByCategory("week");
+            List<CategoryStatsDTO> result = dashboardService.getByCategory("week", null, null);
 
             assertThat(result).isEmpty();
         }
@@ -303,7 +329,7 @@ class DashboardServiceTest {
         void shouldReturnWeeklyGoals() {
             when(mongoTemplate.find(any(Query.class), eq(Session.class))).thenReturn(sampleSessions());
 
-            GoalsDTO result = dashboardService.getGoals("week");
+            GoalsDTO result = dashboardService.getGoals("week", null, null);
 
             assertThat(result.period()).isEqualTo("week");
             assertThat(result.totalSessions()).isEqualTo(4);
@@ -319,7 +345,7 @@ class DashboardServiceTest {
         void shouldReturnMonthlyGoals() {
             when(mongoTemplate.find(any(Query.class), eq(Session.class))).thenReturn(sampleSessions());
 
-            GoalsDTO result = dashboardService.getGoals("month");
+            GoalsDTO result = dashboardService.getGoals("month", null, null);
 
             assertThat(result.period()).isEqualTo("month");
             assertThat(result.totalFocusMinutes()).isEqualTo(180);
@@ -330,7 +356,7 @@ class DashboardServiceTest {
         void shouldHandleNoSessions() {
             when(mongoTemplate.find(any(Query.class), eq(Session.class))).thenReturn(List.of());
 
-            GoalsDTO result = dashboardService.getGoals("week");
+            GoalsDTO result = dashboardService.getGoals("week", null, null);
 
             assertThat(result.totalSessions()).isZero();
             assertThat(result.activeDays()).isZero();
@@ -340,7 +366,7 @@ class DashboardServiceTest {
         @Test
         @DisplayName("Should throw for invalid period")
         void shouldThrowForInvalidPeriod() {
-            assertThatThrownBy(() -> dashboardService.getGoals("invalid"))
+            assertThatThrownBy(() -> dashboardService.getGoals("invalid", null, null))
                     .isInstanceOf(IllegalArgumentException.class);
         }
     }

@@ -46,34 +46,55 @@ public class DashboardService {
 
     // ==================== 2. OVERVIEW ====================
 
-    public OverviewDTO getOverview(String period) {
+    public OverviewDTO getOverview(String period, LocalDate customStart, LocalDate customEnd) {
         LocalDate now = LocalDate.now();
         LocalDate startDate;
+        LocalDate endDate;
         String groupBy;
 
-        switch (period.toLowerCase()) {
-            case "week" -> {
-                startDate = now.minusDays(6);
-                groupBy = "day";
+        if (customStart != null && customEnd != null) {
+            startDate = customStart;
+            endDate = customEnd;
+            long daysBetween = ChronoUnit.DAYS.between(startDate, endDate);
+            groupBy = daysBetween > 60 ? "week" : "day";
+        } else {
+            endDate = now;
+            switch (period.toLowerCase()) {
+                case "week" -> {
+                    startDate = now.minusDays(6);
+                    groupBy = "day";
+                }
+                case "month" -> {
+                    startDate = now.withDayOfMonth(1);
+                    groupBy = "day";
+                }
+                case "year" -> {
+                    startDate = now.withDayOfYear(1);
+                    groupBy = "week";
+                }
+                case "all" -> {
+                    List<Session> allSessions = mongoTemplate.findAll(Session.class);
+                    if (allSessions.isEmpty()) {
+                        return new OverviewDTO("all", 0, 0, 0.0, List.of());
+                    }
+                    LocalDate earliest = allSessions.stream()
+                            .map(Session::getDate).min(LocalDate::compareTo).orElse(now);
+                    startDate = earliest;
+                    long days = ChronoUnit.DAYS.between(startDate, now);
+                    groupBy = days > 60 ? "week" : "day";
+                }
+                default -> throw new IllegalArgumentException(
+                        "Invalid period: " + period + ". Use: week, month, year, all");
             }
-            case "month" -> {
-                startDate = now.withDayOfMonth(1);
-                groupBy = "day";
-            }
-            case "year" -> {
-                startDate = now.withDayOfYear(1);
-                groupBy = "week";
-            }
-            default -> throw new IllegalArgumentException("Invalid period: " + period + ". Use: week, month, year");
         }
 
-        List<Session> sessions = findByDateRange(startDate, now);
+        List<Session> sessions = findByDateRange(startDate, endDate);
 
         List<OverviewEntryDTO> data;
         if ("day".equals(groupBy)) {
-            data = groupByDay(sessions, startDate, now);
+            data = groupByDay(sessions, startDate, endDate);
         } else {
-            data = groupByWeek(sessions, startDate, now);
+            data = groupByWeek(sessions, startDate, endDate);
         }
 
         long totalFocus = sessions.stream().mapToLong(Session::getTotalFocusMinutes).sum();
@@ -87,11 +108,19 @@ public class DashboardService {
 
     // ==================== 3. BY CATEGORY ====================
 
-    public List<CategoryStatsDTO> getByCategory(String period) {
-        LocalDate now = LocalDate.now();
-        LocalDate startDate = resolveStartDate(period, now);
+    public List<CategoryStatsDTO> getByCategory(String period, LocalDate customStart, LocalDate customEnd) {
+        List<Session> sessions;
 
-        List<Session> sessions = findByDateRange(startDate, now);
+        if (customStart != null && customEnd != null) {
+            sessions = findByDateRange(customStart, customEnd);
+        } else if ("all".equalsIgnoreCase(period)) {
+            sessions = mongoTemplate.findAll(Session.class);
+        } else {
+            LocalDate now = LocalDate.now();
+            LocalDate startDate = resolveStartDate(period, now);
+            sessions = findByDateRange(startDate, now);
+        }
+
         long grandTotalMinutes = sessions.stream().mapToLong(Session::getTotalFocusMinutes).sum();
 
         Map<Category, List<Session>> grouped = sessions.stream()
@@ -182,11 +211,28 @@ public class DashboardService {
 
     // ==================== 7. GOALS ====================
 
-    public GoalsDTO getGoals(String period) {
+    public GoalsDTO getGoals(String period, LocalDate customStart, LocalDate customEnd) {
         LocalDate now = LocalDate.now();
-        LocalDate startDate = resolveStartDate(period, now);
+        LocalDate startDate;
+        LocalDate endDate;
 
-        List<Session> sessions = findByDateRange(startDate, now);
+        if (customStart != null && customEnd != null) {
+            startDate = customStart;
+            endDate = customEnd;
+        } else if ("all".equalsIgnoreCase(period)) {
+            List<Session> allSessions = mongoTemplate.findAll(Session.class);
+            if (allSessions.isEmpty()) {
+                return new GoalsDTO("all", 0, 0, 0, 0.0, 0.0, 0, 0);
+            }
+            startDate = allSessions.stream()
+                    .map(Session::getDate).min(LocalDate::compareTo).orElse(now);
+            endDate = now;
+        } else {
+            startDate = resolveStartDate(period, now);
+            endDate = now;
+        }
+
+        List<Session> sessions = findByDateRange(startDate, endDate);
 
         long totalFocus = sessions.stream().mapToLong(Session::getTotalFocusMinutes).sum();
         long totalSessions = sessions.size();
@@ -199,7 +245,7 @@ public class DashboardService {
                 .collect(Collectors.toSet());
 
         int activeDays = activeDates.size();
-        int totalDaysInPeriod = (int) ChronoUnit.DAYS.between(startDate, now) + 1;
+        int totalDaysInPeriod = (int) ChronoUnit.DAYS.between(startDate, endDate) + 1;
         double avgFocusPerDay = activeDays > 0 ? round((double) totalFocus / totalDaysInPeriod) : 0.0;
 
         return new GoalsDTO(period, totalFocus, totalSessions, successfulSessions,
@@ -244,20 +290,32 @@ public class DashboardService {
     }
 
     private List<OverviewEntryDTO> groupByWeek(List<Session> sessions, LocalDate start, LocalDate end) {
-        Map<Integer, List<Session>> grouped = sessions.stream()
-                .collect(Collectors.groupingBy(s -> s.getDate().get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)));
+        // Use composite key "year-week" to handle year boundaries correctly
+        Map<String, List<Session>> grouped = sessions.stream()
+                .collect(Collectors.groupingBy(s -> {
+                    int weekYear = s.getDate().get(IsoFields.WEEK_BASED_YEAR);
+                    int week = s.getDate().get(IsoFields.WEEK_OF_WEEK_BASED_YEAR);
+                    return weekYear + "-" + week;
+                }));
 
         List<OverviewEntryDTO> result = new ArrayList<>();
-        int startWeek = start.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR);
-        int endWeek = end.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR);
+        LocalDate current = start;
+        Set<String> processedWeeks = new LinkedHashSet<>();
 
-        for (int week = startWeek; week <= endWeek; week++) {
-            List<Session> weekSessions = grouped.getOrDefault(week, List.of());
-            long focusMinutes = weekSessions.stream().mapToLong(Session::getTotalFocusMinutes).sum();
-            long count = weekSessions.size();
-            long success = weekSessions.stream().filter(Session::isSuccess).count();
-            double successRate = count > 0 ? round((double) success / count * 100) : 0.0;
-            result.add(new OverviewEntryDTO("Semana " + week, focusMinutes, count, successRate));
+        while (!current.isAfter(end)) {
+            int weekYear = current.get(IsoFields.WEEK_BASED_YEAR);
+            int week = current.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR);
+            String key = weekYear + "-" + week;
+
+            if (processedWeeks.add(key)) {
+                List<Session> weekSessions = grouped.getOrDefault(key, List.of());
+                long focusMinutes = weekSessions.stream().mapToLong(Session::getTotalFocusMinutes).sum();
+                long count = weekSessions.size();
+                long success = weekSessions.stream().filter(Session::isSuccess).count();
+                double successRate = count > 0 ? round((double) success / count * 100) : 0.0;
+                result.add(new OverviewEntryDTO("Semana " + week, focusMinutes, count, successRate));
+            }
+            current = current.plusDays(1);
         }
 
         return result;
